@@ -8,7 +8,7 @@ rospy.init_node('pub_once', anonymous=True)
 
 pub = rospy.Publisher('/gazebo/set_model_state', ModelState, queue_size=5)
 
-time.sleep(5)
+time.sleep(3)
 
 data = ModelState()
 data.model_name = 'iris'
@@ -20,7 +20,7 @@ data.pose.position.z = 10.0
 data.pose.orientation.x = 0.0
 data.pose.orientation.y = 0.259
 data.pose.orientation.z = 0.0
-data.pose.orientation.w =0.966
+data.pose.orientation.w = 0.966
 
 data.twist.linear.x = 0.0
 data.twist.linear.y = 0.0

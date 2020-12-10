@@ -8,53 +8,56 @@ from geometry_msgs.msg import *
 # import all mavros messages and services
 from mavros_msgs.msg import *
 from mavros_msgs.srv import * 
+from sensor_msgs.msg import Imu
+
+def setarm(x): # input: 1=arm, 0=disarm
+	rospy.wait_for_service('/mavros/cmd/arming')
+	try:
+		arming = rospy.ServiceProxy('/mavros/cmd/arming', CommandBool)
+		response = arming(x)
+		response.success
+	except rospy.ServiceException, e:
+		print "Service call failed: %s"%e
+
+def setmode(x):
+	rospy.wait_for_service('/mavros/set_mode')
+	try:
+		mode = rospy.ServiceProxy('/mavros/set_mode', SetMode)
+		response = mode(0,x)
+		response.mode_sent
+	except rospy.ServiceException, e:
+		print "Service call failed: %s"%e
+
+def imu_call(val):
+	global z
+	z = val.linear_acceleration.z
+	print(z)
+
+def man_pub(man_msg):
+    rate = rospy.Rate(10) # 10hz
+    while not rospy.is_shutdown():
+        pub.publish(man_msg)
+        rate.sleep()
 
 
-def setArm():
-        rospy.wait_for_service('mavros/cmd/arming')
-        try:
-            armService = rospy.ServiceProxy('mavros/cmd/arming', mavros_msgs.srv.CommandBool)
-            armService(True)
-        except rospy.ServiceException, e:
-            print "Service arming call failed: %s"%e
+if __name__ == '__main__':
+	rospy.init_node('drop_node', anonymous=True)
+	print("drop_node initialised...")
+	pub = rospy.Publisher('mavros/manual_control/send', ManualControl, queue_size=10)
+	rospy.Subscriber("/mavros/imu/data", Imu, imu_call)
+	man_msg = ManualControl()
+	setarm(1)
+	time.sleep(4)
+	while True:
+		if(0<z<0.2):
+			setmode('MANUAL')
+			man_msg.x = 0
+			man_msg.y = 0
+			man_msg.z = 0
+			man_msg.r = 0
+			man_pub(man_msg)
 
+			print('Its stable baby')
 
-def setPositionMode():
-        rospy.wait_for_service('mavros/set_mode')
-        try:
-            flightModeService = rospy.ServiceProxy('mavros/set_mode', mavros_msgs.srv.SetMode)
-            flightModeService(custom_mode='POSCTL')
-        except rospy.ServiceException, e:
-            print "service set_mode call failed: %s. Position Mode could not be set."%e
-
-def setManualMode():
-        rospy.wait_for_service('mavros/set_mode')
-        try:
-            flightModeService = rospy.ServiceProxy('mavros/set_mode', mavros_msgs.srv.SetMode)
-            flightModeService(custom_mode='MANUAL')
-        except rospy.ServiceException, e:
-            print "service set_mode call failed: %s. Manual Mode could not be set."%e
-
-
-
-rospy.init_node('setpoint_node', anonymous=True)
-print("node initialised...")
-pub = rospy.Publisher('mavros/manual_control/send', ManualControl, queue_size=10)
-sp_pub = rospy.Publisher('mavros/setpoint_raw/local', PositionTarget, queue_size=1)
-msg = ManualControl()
-
-armService = rospy.ServiceProxy('mavros/cmd/arming', mavros_msgs.srv.CommandBool)
-armService(True)
-setManualMode()
-msg.x = 0
-msg.y = 0
-msg.z = 0
-msg.r = 0
-
-i = 0
-while i < 100:
-    pub.publish(msg)
-    rospy.sleep(1)
-    i = i + 1
 
 
